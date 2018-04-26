@@ -11,23 +11,23 @@ ggplot(aes(X1, X2, colour = factor(yhat))) +
   geom_point(alpha = .4, size = 4) +
   geom_point(data = moons, aes(X1, X2), colour = "dodger blue", alpha = .7) +
   theme_minimal() +
-  guides(colour = FALSE) + 
+  guides(colour = FALSE) +
   labs(title = "Model Decision regions")
 
 loss_acc$ix <- seq(nrow(loss_acc))
 
-p1 <- loss_acc %>% 
-  ggplot(aes(ix, loss)) + 
+p1 <- loss_acc %>%
+  ggplot(aes(ix, loss)) +
   geom_line(aes(colour = loss), alpha = .5, size= .8) +
   theme_minimal() +
-  labs(title = "Loss (BCE) across model iterations") + 
+  labs(title = "Loss (BCE) across model iterations") +
   guides(colour = FALSE)
 
-p2 <- loss_acc %>% 
-  ggplot(aes(ix, accuracy)) + 
+p2 <- loss_acc %>%
+  ggplot(aes(ix, accuracy)) +
   geom_line(aes(colour = loss), alpha = .5, size= .8) +
   theme_minimal() +
-  labs(title = "Accuracy across model iterations") + 
+  labs(title = "Accuracy across model iterations") +
   guides(colour = FALSE)
 
 p3 <- gridExtra::grid.arrange(p1, p2, ncol = 1)
@@ -39,3 +39,25 @@ dir.create("plots")
 
 ggsave("plots/loss_acc.png", p3)
 ggsave("plots/dec_reg.png", dec_reg_plot)
+
+
+# create logistic regression classifier and decision region
+
+clf_lr <- glm(y ~ ., data = moons_data, family = binomial(link='logit'))
+
+grid <- as_data_frame(expand.grid(
+  x1 = seq(min(moons_data$x1), max(moons_data$x1), .05),
+  x2 = seq(min(moons_data$x2), max(moons_data$x2), .05)
+))
+
+grid_preds <- as.numeric(predict.glm(clf_lr, grid, type = "response"))
+grid$preds <- round(grid_preds)
+
+grid %>%
+  ggplot(aes(x1, x2, colour = factor(preds))) +
+  geom_point(alpha = .2, size = 3) +
+  geom_point(data = moons_data, aes(x1, x2, colour = factor(y), alpha = .4)) +
+  theme_minimal() +
+  guides(alpha = FALSE,
+         colour = FALSE) +
+  labs(title = "Logistic regression decision boundary")
