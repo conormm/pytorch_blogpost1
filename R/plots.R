@@ -44,20 +44,35 @@ ggsave("plots/dec_reg.png", dec_reg_plot)
 # create logistic regression classifier and decision region
 
 clf_lr <- glm(y ~ ., data = moons_data, family = binomial(link='logit'))
+clf_rf <- ranger(y ~ ., data = moons_data)
 
 grid <- as_data_frame(expand.grid(
   x1 = seq(min(moons_data$x1), max(moons_data$x1), .05),
   x2 = seq(min(moons_data$x2), max(moons_data$x2), .05)
 ))
 
-grid_preds <- as.numeric(predict.glm(clf_lr, grid, type = "response"))
-grid$preds <- round(grid_preds)
+grid_preds_lr <- as.numeric(predict.glm(clf_lr, grid, type = "response"))
+grid_preds_rf <- predict(clf_rf, grid)$predictions
 
-grid %>%
-  ggplot(aes(x1, x2, colour = factor(preds))) +
-  geom_point(alpha = .2, size = 3) +
-  geom_point(data = moons_data, aes(x1, x2, colour = factor(y), alpha = .4)) +
-  theme_minimal() +
-  guides(alpha = FALSE,
-         colour = FALSE) +
+grid$preds_lr <- round(grid_preds)
+grid$preds_rf <- round(grid_preds_rf)
+
+p1 <- grid %>% 
+  ggplot(aes(x1, x2, colour = factor(preds_lr))) + 
+  geom_point(alpha = .2, size = 3) + 
+  geom_point(data = moons_data, aes(x1, x2, colour = factor(y), alpha = .4)) + 
+  theme_minimal() + 
+  guides(alpha = FALSE, 
+         colour = FALSE) + 
   labs(title = "Logistic regression decision boundary")
+
+p2 <- grid %>% 
+  ggplot(aes(x1, x2, colour = factor(preds_rf))) + 
+  geom_point(alpha = .2, size = 3) + 
+  geom_point(data = moons_data, aes(x1, x2, colour = factor(y), alpha = .4)) + 
+  theme_minimal() + 
+  guides(alpha = FALSE, 
+         colour = FALSE) + 
+  labs(title = "Random Forest regression decision boundary")
+
+grid.arrange(p1, p2, ncol = 2)
