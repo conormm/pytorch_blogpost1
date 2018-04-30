@@ -5,6 +5,7 @@ import torch.nn as nn
 import matplotlib.pyplot as plt
 import numpy as np
 from keras.utils import np_utils
+from torch.utils.data import dataset, dataloader
 
 %matplotlib inline
 
@@ -12,6 +13,24 @@ X, y_ = make_moons(n_samples=1000, noise=.1)
 y = np_utils.to_categorical(y_)
 
 #plt.scatter(X[:, 0], X[:, 1], c=y_, alpha=.4)
+
+def to_categorical(y, num_classes):
+    """1-hot encodes a tensor"""
+    return np.eye(num_classes, dtype='uint8')[y]
+
+class PrepareData(dataset):
+
+    def __init__(self, X, y):
+        if not torch.is_tensor(X):
+            self.X = Variable(torch.from_numpy(X))
+        if not torch.is_tensor(y):
+            self.y = Variable(torch.from_numpy(y))
+
+    def __len__(self):
+        return len(self.X)
+
+    def __getitem__(self, idx):
+        return self.X[idx], self.y[idx]
 
 def torch_acc(preds, true_y):
     "Computes accuracy - presumes inputs are already torch.Tensors/Vars"
