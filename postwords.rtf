@@ -1,13 +1,13 @@
-{\rtf1\ansi\ansicpg1252\cocoartf1504\cocoasubrtf830
+{\rtf1\ansi\ansicpg1252\cocoartf1561\cocoasubrtf400
 {\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 {\*\expandedcolortbl;;}
-\margl1440\margr1440\vieww16860\viewh11200\viewkind0
+\paperw12240\paperh15840\margl1440\margr1440\vieww19360\viewh14280\viewkind0
 \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
 
-\f0\fs28 \cf0 This post provides a tour around Pytorch with a specific focus on building a simple multilayer perceptron to classify two classes in some toy data. My goal is to introduce some of pytorch\'92s basic building blocks, whilst also highlighting how deep learning can be used to learn non-linear functions. All of the code for this post is here.\
+\f0\fs28 \cf0 This post provides a tour around Pytorch with a specific focus on building a vanilla neural network (multilayer perceptron) to separate (i.e. classify) two classes in some toy data. My goal is to introduce some of pytorch\'92s basic building blocks, whilst also highlighting how deep learning can be used to learn non-linear functions. All of the code for this post is this github repo.\
 \
-I have now experimented with several deep learning frameworks - tensorflow, keras, mxnet - but, pytorch has recently become my tool of choice. This isn\'92t because I think it is objectively better than other frameworks, but more that it *feels* more suited to my style of programming and learning. \
+I have now experimented with several deep learning frameworks - tensorflow, keras, mxnet - but, pytorch has recently become my tool of choice. This isn\'92t because I think it is objectively better than other frameworks, but more that it *feels* more pythonic, intuitive, and better suited to my style of learning and experimenting.\
 \
 ## Getting started\
 To follow along make sure you have pytorch installed on your machine. Note that I am using version ****. The next version of pytorch will introduce some breaking changes (read about them here). \
@@ -16,9 +16,32 @@ The learning task for this post will be to classify points in half moon shapes. 
 \
 Despite applying a softmax transformation to the predicted outputs (squeezing predicted output logits to sum to 1), the logistic regression is linear in its parameters and, therefore, struggles to learn non-linear relationships. We could use a more advanced ML model for this task, such as a random forest, but then we wouldn\'92t have an excuse to play around with a neural network!\
 \
-Before building the model, we will first create a custom data pre-processor and loader. In this example, the transformer will simply X and y from numpy arrays to pytorch tensors. We will then use the dataloader class to handle how data is passed through the model. In this instance we will set-up a minibatch routine. This means that during each epoch the model will x\
+Before building the model, we will first create a custom data pre-processor and loader. In this example, the transformer will simply transform X and y from numpy arrays to torch tensors. We will then use the dataloader class to handle how data is passed through the model. In this instance we will set-up a mini-batch routine. This means that during each epoch the model will train on small subsets (batches) of the data - that is, it will update its weights according with respect to the loss associated with each batch. This is generally a better approach than training on the full dataset each epoch. It is also advisable to use smaller batches - though this is a hyper parameter so do experiment!\
 \
-The standard approach to defining a deep learning model with pytorch is to encapsulate the network in a class. I quite like this approach because because it ensures that all layers, data, and methods are accessible from a single object. \
+Defining a model\
+The standard approach to defining a deep learning model with pytorch is to encapsulate the network in a class. I quite like this approach because it ensures that all layers, data, and methods are accessible from a single object. The purpose of the class is to define the architecture of the network and to manage the forward pass of the data through it.\
+\
+The typical approach is to define layers as variables. In this case we define a single layer network. The nn.Linear function requires input and output size. In the first layer input size is the number the features in the input data which in our contrived example is two, out features is the number of neurons the hidden layer. \
+\
+We then define a class method `forward` to manage the flow of data through the network. Here we call the layers on the data and also use apply the `relu` activation (from torch.nn.functional) on the hidden layer. Finally, we apply a sigmoid transformation on the output to squeeze the predicted values to sum to one.\
+\
+Running the model\
+Next we need to define how the model learns. First we instantiate a model object from the class, we\'92ll call this `model`. Next we define the cost function - in this case binary cross entropy. Finally we define our optimiser, `Adam`. The optimiser will be optimising parameters of our model, therefore, the params argument is simply the model parameters. \
+\
+Now we are ready to train the model. We will do this for 50 epochs. I have commented the code block to make it clear what is happening at each stage. Basically, make the input and target torch Variables (note this step will not be necessary in the next release of pytorch because torch.tensors and Variables will be merged) and then specify the forward and backward pass. \
+\
+We can see that the loss decreases rapidly (the volatility can be explained by the mini-batches), which means our model is working - awesome! You can also see the non-linear decision regions learned by the model. \
+\
+Summary\
+The purpose of this post was to show how to get up and running defining neural networks with pytorch. The model defined here is very simple, but the intention is to highlight the building blocks. I also didn\'92\'92t run a testing loop so we have no idea about the models test performance. In my next post I\'92ll define a more complex pytorch model so stay tuned! \
+\
+Thanks for reading. \
+\
+\
+\
+\
+\
+\
 \
 \
 \

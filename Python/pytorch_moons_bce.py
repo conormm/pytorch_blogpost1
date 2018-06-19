@@ -1,36 +1,43 @@
 from sklearn.datasets import make_moons
-import torch as tr
+import pandas as pd
+import torch
 from torch.autograd import Variable
 import torch.nn as nn
 import matplotlib.pyplot as plt
 import numpy as np
-from keras.utils import np_utils
-from torch.utils.data import dataset, dataloader
+
+from torch.utils.data import Dataset, DataLoader
+import torch.nn.functional as F
+
+torch.__version__
 
 %matplotlib inline
-
-X, y_ = make_moons(n_samples=1000, noise=.1)
-y = np_utils.to_categorical(y_)
-
-#plt.scatter(X[:, 0], X[:, 1], c=y_, alpha=.4)
 
 def to_categorical(y, num_classes):
     """1-hot encodes a tensor"""
     return np.eye(num_classes, dtype='uint8')[y]
 
-class PrepareData(dataset):
+X, y_ = make_moons(n_samples=1000, noise=.1)
+y = to_categorical(y_, 2)
+
+#plt.scatter(X[:, 0], X[:, 1], c=y_, alpha=.4)
+
+class PrepareData(Dataset):
 
     def __init__(self, X, y):
         if not torch.is_tensor(X):
-            self.X = Variable(torch.from_numpy(X))
+            self.X = torch.from_numpy(X)
         if not torch.is_tensor(y):
-            self.y = Variable(torch.from_numpy(y))
+            self.y = torch.from_numpy(y)
 
     def __len__(self):
         return len(self.X)
 
     def __getitem__(self, idx):
         return self.X[idx], self.y[idx]
+
+ds = PrepareData(X=X, y=y)
+ds = DataLoader(ds, batch_size=50, shuffle=True)
 
 def torch_acc(preds, true_y):
     "Computes accuracy - presumes inputs are already torch.Tensors/Vars"
@@ -40,45 +47,50 @@ def torch_acc(preds, true_y):
     return acc
 
 class MoonsModel(nn.Module):
-    def __init__(self):
+    def __init__(self, n_features, n_neurons):
         super(MoonsModel, self).__init__()
-        self.hidden_1 = nn.Linear(in_features=2, out_features=50)
-        self.relu_h1 = nn.Tanh()
-        self.dropout_05 = nn.Dropout(p=0.5)
-        self.out_layer = nn.Linear(in_features=50, out_features=2)
-        self.sig = nn.Sigmoid()
+        self.hidden = nn.Linear(in_features=n_features, out_features=n_neurons)
+        self.out_layer = nn.Linear(in_features=n_neurons, out_features=2)
 
     def forward(self, X):
-        out = self.hidden_1(X)
-        out = self.relu_h1(out)
-        out = self.dropout_05(out)
-        out = self.out_layer(out)
-        out = self.sig(out)
+        out = F.relu(self.hidden(X))
+        out = F.sigmoid(self.out_layer(out))
         return out
 
-m = MoonsModel()
+model = MoonsModel(n_features=2, n_neurons=50)
 
 cost_func = nn.BCELoss()
-optimizer = tr.optim.Adam(params=m.parameters(), lr=0.05)
+optimizer = tr.optim.Adam(params=model.parameters(), lr=0.01)
 
-num_epochs = 500
+num_epochs = 20
 
+losses = []
+accs = []
 for e in range(num_epochs):
 
-    #========torchify inputs/target============================
-    X_ = Variable(tr.from_numpy(X), requires_grad=False).float()
-    y_ = Variable(tr.from_numpy(y), requires_grad=False).float()
+    for ix, (_x, _y) in enumerate(ds):
 
-    #========forward pass=====================================
-    yhat = m(X_)
-    loss = cost_func(yhat, y_) # loss is probabilty that predicted==1
-    acc = tr.eq(yhat.round(), y_).float().mean()
+        #=========make inpur differentiable=======================
 
-    #=======backward pass=====================================
-    optimizer.zero_grad()
-    loss.backward()
-    optimizer.step()
+        _x = Variable(_x).float()
+        _y = Variable(_y).float()
 
-    if e % 50 == 0:
+        #========forward pass=====================================
+        yhat = model(_x).float()
+        loss = cost_func(yhat, _y)
+        acc = tr.eq(yhat.round(), _y).float().mean() # accuracy
+
+        #=======backward pass=====================================
+        optimizer.zero_grad() # zero the gradients on each pass before the update
+        loss.backward() # backpropagate the loss through the model
+        optimizer.step() # update the gradients w.r.t the loss
+
+        losses.append(loss.data[0])
+        accs.append(acc.data[0])
+
+    if e % 1 == 0:
         print("[{}/{}], loss: {} acc: {}".format(e,
         num_epochs, np.round(loss.data[0], 3), np.round(acc.data[0], 3)))
+
+
+pd.DataFrame(dict(losses=losses, acc=accs)).to_csv("Data/model_performance.csv")
